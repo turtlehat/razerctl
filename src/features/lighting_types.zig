@@ -1,3 +1,5 @@
+pub const key_maps = @import("key_maps.zig");
+
 pub const Zone = struct {
     id: u8,
     name: []const u8,
@@ -22,6 +24,7 @@ pub const Config = struct {
     gamma: f32 = 2.8,
     protocol: ?enum { legacy_rows, extended_rows, large_matrix, audio37 } = null,
     layouts: []const Layout = &.{},
+    key_maps: []const key_maps.Map = &.{},
     control_interface: u8 = 0,
     frame_interface: ?u8 = null,
     report_id: u8 = 0,
@@ -100,6 +103,14 @@ pub const Config = struct {
         for (self.layouts) |layout|
             if (layout.edition == edition and layout.layout == layout_id)
                 return layout;
+        return null;
+    }
+
+    pub fn selectKeyMap(self: Config, edition: u8, layout_id: u8) ?key_maps.Map {
+        const id = if (layout_id == 0) 1 else layout_id;
+        for (self.key_maps) |map|
+            if (map.edition == edition and map.layout == id)
+                return map;
         return null;
     }
 };

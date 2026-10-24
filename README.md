@@ -233,9 +233,10 @@ razerctl play examples/polychromatic/undertow-6x16.json
 ```
 
 Ghost Signal is ChromaEffects-only. Typing responses in Ghost Signal and
-Prismatic Drift currently require an ANSI Blade 14 (2024); other layouts
-still play their animated backgrounds. Polychromatic Prismatic Drift has
-no typing response.
+Prismatic Drift use model- and layout-specific key maps for all supported
+laptops. Only the ANSI Blade 14 (2024) has been hardware-verified; reports
+from other models are welcome. Polychromatic Prismatic Drift has no typing
+response.
 
 Reactive and Ripple need permission to read keyboard events. On many
 distributions, add yourself to the `input` group with

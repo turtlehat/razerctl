@@ -33,6 +33,17 @@ pub const descriptor = device.Descriptor{
         },
         .display = .{ .local_dimming = true },
         .lighting = .{
+            .key_maps = &.{
+                .{ .edition = 0, .layout = 1, .rows = 1, .columns = 102, .entries = &lighting.key_maps.map_258ab6d74c29 },
+                .{ .edition = 0, .layout = 3, .rows = 1, .columns = 102, .entries = &lighting.key_maps.map_4f27579cf905 },
+                .{ .edition = 0, .layout = 4, .rows = 1, .columns = 102, .entries = &lighting.key_maps.map_4f27579cf905 },
+                .{ .edition = 0, .layout = 6, .rows = 1, .columns = 102, .entries = &lighting.key_maps.map_4f27579cf905 },
+                .{ .edition = 0, .layout = 7, .rows = 1, .columns = 102, .entries = &lighting.key_maps.map_4f27579cf905 },
+                .{ .edition = 0, .layout = 8, .rows = 1, .columns = 102, .entries = &lighting.key_maps.map_258ab6d74c29 },
+                .{ .edition = 0, .layout = 9, .rows = 1, .columns = 102, .entries = &lighting.key_maps.map_258ab6d74c29 },
+                .{ .edition = 0, .layout = 12, .rows = 1, .columns = 102, .entries = &lighting.key_maps.map_2608afc8de3a },
+                .{ .edition = 0, .layout = 16, .rows = 1, .columns = 102, .entries = &lighting.key_maps.map_4f27579cf905 },
+            },
             .protocol = .large_matrix,
             .control_interface = 2,
             .frame_interface = 3,

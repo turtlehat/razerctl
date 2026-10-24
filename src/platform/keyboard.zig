@@ -1,6 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
 const chroma = @import("chroma");
+const lighting = @import("lighting_types");
+const transport = @import("transport");
 const c = if (builtin.os.tag == .linux) @import("keyboard_input_c") else struct {};
 
 /// Every key-capable event node of one Razer product; a laptop keyboard
@@ -8,11 +10,20 @@ const c = if (builtin.os.tag == .linux) @import("keyboard_input_c") else struct 
 pub const Keyboard = struct {
     fds: [8]c_int = undefined,
     len: usize = 0,
+    entries: []const lighting.key_maps.Entry,
 
-    pub fn open(pid: u16) !Keyboard {
+    pub fn open(pid: u16, hid: *transport.Device, config: lighting.Config, rows: u8, columns: u8) !Keyboard {
         if (builtin.os.tag != .linux) return error.KeyboardCaptureUnsupportedPlatform;
-        if (pid != 0x02b6) return error.KeyboardLayoutUnsupported;
-        var self: Keyboard = .{};
+        const map = selected: {
+            try hid.acquire();
+            defer hid.release();
+            const edition = try hid.call(.{ .id = 0x0086, .min_response = 2 }, &.{ 0, 0, 0 });
+            break :selected config.selectKeyMap(edition.args[1], edition.args[0]) orelse
+                return error.KeyboardLayoutUnsupported;
+        };
+        if (map.rows != rows or map.columns != columns)
+            return error.KeyboardLayoutUnsupported;
+        var self: Keyboard = .{ .entries = map.entries };
         const count = c.rz_keyboard_open_all(pid, &self.fds, self.fds.len);
         if (count < 0) {
             if (std.c._errno().* == c.EACCES or std.c._errno().* == c.EPERM)
@@ -32,10 +43,10 @@ pub const Keyboard = struct {
 
     pub fn drain(self: *Keyboard, p: *const chroma.Profile, device: usize, tick: u64) !void {
         if (builtin.os.tag != .linux) return error.KeyboardCaptureUnsupportedPlatform;
-        for (self.fds[0..self.len]) |fd| try drainOne(fd, p, device, tick);
+        for (self.fds[0..self.len]) |fd| try self.drainOne(fd, p, device, tick);
     }
 
-    fn drainOne(fd: c_int, p: *const chroma.Profile, device: usize, tick: u64) !void {
+    fn drainOne(self: *Keyboard, fd: c_int, p: *const chroma.Profile, device: usize, tick: u64) !void {
         while (true) {
             var kind: u16 = 0;
             var code: u16 = 0;
@@ -46,19 +57,20 @@ pub const Keyboard = struct {
                 else => return error.KeyboardReadFailed,
             }
             if (kind != 1) continue;
-            if (cell(code)) |position|
+            for (self.entries) |entry| {
+                if (entry.code != code) continue;
                 try chroma.input(p.*, device, .{
-                    .row = position[0],
-                    .col = position[1],
+                    .row = entry.row,
+                    .col = entry.col,
                     .pressed = value != 0,
                 }, tick);
+            }
         }
     }
 };
 
-// ANSI Blade 02b6 key codes to hardware cells, layout 1.
-// Extended Linux key codes are translated explicitly; no character layout.
-pub fn cell(code: u16) ?[2]u8 {
+// Measured ANSI Blade mapping retained as a regression reference.
+fn measuredCell(code: u16) ?[2]u8 {
     return switch (code) {
         1 => .{ 0, 1 },
         59...68 => .{ 0, @intCast(code - 57) },
@@ -90,12 +102,24 @@ pub fn cell(code: u16) ?[2]u8 {
     };
 }
 
-test "Blade physical key mapping distinguishes extended keys and skips unmapped input" {
-    try std.testing.expectEqual(@as(?[2]u8, .{ 2, 2 }), cell(16));
-    try std.testing.expectEqual(@as(?[2]u8, .{ 5, 11 }), cell(97));
-    try std.testing.expectEqual(@as(?[2]u8, .{ 5, 1 }), cell(29));
-    try std.testing.expectEqual(@as(?[2]u8, null), cell(57));
-    try std.testing.expectEqual(@as(?[2]u8, null), cell(272));
+test "shared input maps preserve every measured Blade key" {
+    const entries = lighting.key_maps.blade_ansi;
+    for (0..256) |code| {
+        if (measuredCell(@intCast(code))) |position| {
+            var found = false;
+            for (entries) |entry|
+                if (entry.code == code and entry.row == position[0] and entry.col == position[1]) {
+                    found = true;
+                };
+            try std.testing.expect(found);
+        }
+    }
+    var space = false;
+    for (entries) |entry|
+        if (entry.code == 57 and entry.row == 5 and entry.col == 6) {
+            space = true;
+        };
+    try std.testing.expect(space);
 }
 
 test "evdev reader preserves quick taps and reports truncated input" {

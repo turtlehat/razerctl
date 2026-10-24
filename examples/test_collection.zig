@@ -18,6 +18,53 @@ const Clock = struct {
     }
 };
 
+test "all laptop key maps select exactly and address valid frame cells" {
+    for (device.DEVICES) |descriptor| {
+        const config = descriptor.features.lighting;
+        try std.testing.expect(config.key_maps.len > 0);
+        for (config.key_maps, 0..) |map, i| {
+            try std.testing.expect(map.entries.len > 0);
+            const selected = config.selectKeyMap(map.edition, map.layout).?;
+            try std.testing.expectEqual(map.entries.ptr, selected.entries.ptr);
+            try std.testing.expectEqual(map.rows, selected.rows);
+            try std.testing.expectEqual(map.columns, selected.columns);
+            for (config.key_maps[0..i]) |previous|
+                try std.testing.expect(previous.edition != map.edition or previous.layout != map.layout);
+            for (map.entries, 0..) |entry, j| {
+                try std.testing.expect(entry.row < map.rows and entry.col < map.columns);
+                try std.testing.expect(entry.code > 0 and entry.code < 256);
+                for (map.entries[0..j]) |previous|
+                    try std.testing.expect(previous.code != entry.code or previous.row != entry.row or previous.col != entry.col);
+            }
+        }
+        try std.testing.expect(config.selectKeyMap(255, 255) == null);
+        const default = config.selectKeyMap(0, 0).?;
+        try std.testing.expectEqual(@as(u8, 1), default.layout);
+    }
+}
+
+test "input maps retain whole-zone fanout and flat per-key addresses" {
+    for (device.DEVICES) |descriptor| {
+        if (descriptor.pid == 0x0239 or descriptor.pid == 0x02e0) {
+            const map = descriptor.features.lighting.selectKeyMap(0, 1).?;
+            var count: usize = 0;
+            var column: u8 = 0;
+            for (map.entries) |entry| {
+                if (entry.code == 16) {
+                    count += 1;
+                    column = entry.col;
+                }
+            }
+            if (descriptor.pid == 0x0239)
+                try std.testing.expect(count > 1)
+            else {
+                try std.testing.expectEqual(@as(usize, 1), count);
+                try std.testing.expect(column > 16);
+            }
+        }
+    }
+}
+
 test "each Chroma design parses and renders for every shipped laptop" {
     inline for (names) |name| {
         const text = @embedFile("chroma/" ++ name ++ ".ChromaEffects");

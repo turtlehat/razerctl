@@ -31,10 +31,19 @@ const Clock = struct {
 pub fn play(context: command.Context, effect: *const chroma.Profile, output: *ui.Output) ui.Error!void {
     const index = 0;
     const device = effect.devices[index];
+    const spec = try context.allocator.print("0x{x:0>4}", .{device.pid});
+    var selected = (try frame_output.open(context, spec, output)) orelse return;
+    defer selected.close();
+    const shape = selected.session.shape;
+    if (device.rows != shape.rows or device.columns != shape.columns)
+        return output.writeError(try context.allocator.print(
+            "ChromaEffects grid {d}x{d} does not match device grid {d}x{d}; no resizing is performed",
+            .{ device.rows, device.columns, shape.rows, shape.columns },
+        ), null);
     var keyboard: ?Keyboard = null;
     defer if (keyboard) |*source| source.deinit();
     if (effect.needsInput(index)) {
-        keyboard = Keyboard.open(device.pid) catch |err| fallback: {
+        keyboard = Keyboard.open(device.pid, &selected.session.hid, selected.desc.features.lighting, shape.rows, shape.columns) catch |err| fallback: {
             const message = if (err == error.KeyboardPermissionDenied)
                 "warning: Reactive/Ripple inactive: keyboard access denied. On Linux, joining the input group and logging out/in may grant access; this grants access to keyboard events"
             else
@@ -55,15 +64,6 @@ pub fn play(context: command.Context, effect: *const chroma.Profile, output: *ui
     var signals = frames.Input.init() catch |err|
         return output.writeError("play: cannot initialize interruption handling", err);
     defer signals.deinit();
-    const spec = try context.allocator.print("0x{x:0>4}", .{device.pid});
-    var selected = (try frame_output.open(context, spec, output)) orelse return;
-    defer selected.close();
-    const shape = selected.session.shape;
-    if (device.rows != shape.rows or device.columns != shape.columns)
-        return output.writeError(try context.allocator.print(
-            "ChromaEffects grid {d}x{d} does not match device grid {d}x{d}; no resizing is performed",
-            .{ device.rows, device.columns, shape.rows, shape.columns },
-        ), null);
     if (effect.regions.len == 0) {
         waitForInterruption(context.io, &signals) catch |err| {
             if (err == error.StreamInterrupted) {

@@ -153,6 +153,10 @@ pub fn build(b: *std.Build) void {
     const keyboard_input = module(b, b.path("src/platform/keyboard.zig"), target, optimize);
     keyboard_input.link_libc = true;
     keyboard_input.addImport("chroma", chroma);
+    keyboard_input.addImport("transport", transport);
+    for (features.items) |feature|
+        if (std.mem.eql(u8, feature.name, "lighting"))
+            keyboard_input.addImport("lighting_types", feature.capability);
     if (target.result.os.tag == .linux)
         keyboard_input.addImport("keyboard_input_c", translateC(b, translate_c, "src/c/keyboard_input.h", target, optimize, &.{}));
 
