@@ -184,6 +184,12 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = chroma })).step);
     test_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = keyboard_input })).step);
 
+    const collection = module(b, b.path("examples/test_collection.zig"), target, optimize);
+    collection.addImport("chroma", chroma);
+    collection.addImport("polychromatic", polychromatic);
+    collection.addImport("device", device);
+    test_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = collection })).step);
+
     for ([_]*std.Build.Module{ ui, probe_result, saved, battery, device_base_types, stream_input }) |shared|
         test_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = shared })).step);
 

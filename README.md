@@ -197,11 +197,82 @@ Stop other lighting controllers first so they do not overwrite the animation.
 
 Ambient Awareness and Audio Meter effects are not supported.
 
+### Included examples
+
+The [`examples/`](examples/) collection includes six original lighting designs
+and four live Python animations.
+
+#### ChromaEffects and Polychromatic
+
+| Design | Mood |
+|---|---|
+| [**After Hours**](examples/chroma/after-hours.ChromaEffects) | Bright cyan sweeps across dark blue keys with breathing magenta edges |
+| [**Undertow**](examples/chroma/undertow.ChromaEffects) | Contrasting teal currents over deep blue and violet |
+| [**Prismatic Drift**](examples/chroma/prismatic-drift.ChromaEffects) | Drifting rainbow ribbons with pale reactive keystrokes |
+| [**Emberfall**](examples/chroma/emberfall.ChromaEffects) | Hot golden sparks over orange surges and breathing charcoal red |
+| [**Ghost Signal**](examples/chroma/ghost-signal.ChromaEffects) | Cyan keystrokes and violet ripples over a rotating cyan/violet glow |
+| [**Supernova**](examples/chroma/supernova.ChromaEffects) | Sweeping gold light and soft white sparks |
+
+Start with a ChromaEffects file; each includes all supported laptop models:
+
+```sh
+razerctl play examples/chroma/undertow.ChromaEffects
+```
+
+The 2018 Blade 15 (`0x023b`) and 2019 Blade 15 (`0x0246`) have both single-zone
+and per-key variants. If yours reports six rows with `razerctl stream --info`,
+use the same design from `examples/chroma/per-key/` instead.
+
+Prerecorded interpretations of five designs are under
+[`examples/polychromatic/`](examples/polychromatic/). Their animation differs
+from the layered ChromaEffects versions. Choose the rows-by-columns size reported by
+`razerctl stream --info`, for example:
+
+```sh
+razerctl play examples/polychromatic/undertow-6x16.json
+```
+
+Ghost Signal is ChromaEffects-only. Typing responses in Ghost Signal and
+Prismatic Drift currently require an ANSI Blade 14 (2024); other layouts
+still play their animated backgrounds. Polychromatic Prismatic Drift has
+no typing response.
+
 Reactive and Ripple need permission to read keyboard events. On many
 distributions, add yourself to the `input` group with
 `sudo usermod -aG input "$USER"`, then log out and back in.
 **This grants access to all keyboard events, not just Razer's.**
 Without access, other effects still play.
+
+#### Living streams
+
+Python programs create lighting that evolves as it runs:
+
+```sh
+python3 examples/stream/solstice.py
+python3 examples/stream/ghost-in-the-machine.py
+python3 examples/stream/fireworks.py
+python3 examples/stream/digital-rain.py
+```
+
+**Solstice** moves from sunrise through daylight and sunset to a moonlit,
+starry night. A full day takes three minutes; use `--day-seconds 60` for a
+shorter day, or `--realtime` to follow local time.
+
+**Ghost in the Machine** mixes dark blue with neon scanning currents, crimson
+load surges and electric cooling trails. Even a single busy core wakes it up;
+heavier overall activity pushes it further toward red. It shows activity,
+not temperature.
+
+**Fireworks** sends golden trails to the top row, then blooms into colourful
+spheres whose sparks slowly fall and fade, one firework at a time.
+**Digital Rain** sends emerald code trails down the keyboard, with pale leading glyphs and occasional
+signal glitches. Single-row layouts get spreading bursts and travelling code.
+
+The programs need only Python 3 and launch `./zig-out/bin/razerctl` to discover
+your laptop's layout and play the animation. Use `--razerctl /path/to/razerctl`
+to choose another executable, or pass a device ID such as
+`python3 examples/stream/solstice.py 0x02b6`.
+Run any program with `--help` to see its options.
 
 ## License
 
