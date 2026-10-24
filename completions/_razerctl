@@ -1,0 +1,8 @@
+#compdef razerctl
+
+local -a candidates
+candidates=(${(f)"$(razerctl __complete -- "${(@)words[2,CURRENT-1]}" 2>/dev/null)"})
+(( ${#candidates} )) && compadd -- "${candidates[@]}"
+if [[ ${words[2]} == play ]] && (( CURRENT == 3 || CURRENT == 4 )); then
+    _files
+fi

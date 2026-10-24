@@ -1,0 +1,13 @@
+#ifdef _WIN32
+#include <windows.h>
+#else
+#undef _FORTIFY_SOURCE
+#include <sys/file.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+#include <time.h>
+#include <sys/wait.h>
+#include <signal.h>
+#endif

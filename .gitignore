@@ -1,0 +1,7 @@
+zig-out/
+.zig-cache/
+zig-pkg/
+__pycache__/
+research/
+*.sublime-project
+*.sublime-workspace
