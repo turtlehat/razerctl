@@ -8,6 +8,10 @@ from collections import deque
 from _stream import clamp, mix, parser, run
 
 
+IDLE_FLOOR = 0.10
+PULSE_CHANGE = 0.12
+
+
 class CpuMeter:
     def __init__(self, path="/proc/stat"):
         self.path = path
@@ -58,31 +62,35 @@ class Ghost:
         self.rows, self.columns = rows, columns
         self.meter = meter if meter is not None else CpuMeter()
         self.rng = random.Random(seed)
-        self.load = self.target = 0.0
+        self.load = self.target = self.baseline = self.scan = 0.0
         self.last_sample = -1.0
-        self.last_pulse = -1.0
+        self.last_pulse = -10.0
         self.pulses = deque(maxlen=24)
         self.cells = [(column / max(1, columns - 1), row / max(1, rows - 1))
                       for row in range(rows) for column in range(columns)]
 
     def render(self, elapsed, dt):
-        if elapsed - self.last_sample >= 0.25:
+        if elapsed - self.last_sample >= 1:
             reading = self.meter.read()
             if reading is not None:
-                self.target = reading
+                # Background chatter stays below the floor so an idle machine rests.
+                self.target = clamp((reading - IDLE_FLOOR) / (1 - IDLE_FLOOR))
             self.last_sample = elapsed
-        before = self.load
         response = 0.35 if self.target > self.load else 2.0
         self.load += (self.target - self.load) * (1 - math.exp(-dt / response))
-        change = self.load - before
-        if dt > 0 and abs(change) / dt > 0.035 and elapsed - self.last_pulse > 0.6:
+        self.baseline += (self.load - self.baseline) * (1 - math.exp(-dt / 4))
+        change = self.load - self.baseline
+        if abs(change) > PULSE_CHANGE and elapsed - self.last_pulse > 2:
             self.pulses.append((elapsed, self.rng.uniform(0.15, 0.85),
                                 self.rng.uniform(0.2, 0.8), change > 0,
-                                min(1, 0.35 + abs(change) / dt * 2)))
+                                min(1, 0.35 + abs(change) * 2)))
             self.last_pulse = elapsed
+            self.baseline = self.load
         while self.pulses and elapsed - self.pulses[0][0] > 6:
             self.pulses.popleft()
         heat = math.sqrt(self.load)
+        # Integrate speed so heat changes never jump the beam after long runs.
+        self.scan = (self.scan + dt * (0.10 + heat * 0.18)) % 1
         result = []
         for x, y in self.cells:
             flow = (0.5 + 0.5 * math.sin(x * 9 - y * 4 - elapsed * 0.45)
@@ -90,7 +98,7 @@ class Ghost:
             cool = (0.008, 0.025 + flow * 0.045, 0.10 + flow * 0.25)
             hot = (0.22 + flow * 0.50, 0.005, 0.025 + flow * 0.04)
             color = mix(cool, hot, heat)
-            scan = (x - elapsed * (0.10 + heat * 0.18) + y * 0.18) % 1
+            scan = (x - self.scan + y * 0.18) % 1
             beam = math.exp(-((scan - 0.5) / 0.075) ** 2)
             wire = (0.5 + 0.5 * math.sin(x * 21 + y * 11 + elapsed * 1.3)) ** 8
             neon = mix((0.015, 0.65, 1.0), (1.0, 0.015, 0.32), heat)
@@ -101,7 +109,8 @@ class Ghost:
                 distance = abs(x - cx) if self.rows == 1 else math.hypot(x - cx, (y - cy) * 0.55)
                 front = math.exp(-((distance - age * 0.40) / 0.085) ** 2)
                 trail = math.exp(-max(0, age * 0.40 - distance) * 7) if distance < age * 0.40 else 0
-                amount = clamp((front + trail * 0.30) * math.exp(-age * 0.5) * strength)
+                fade_in = min(1, age / 0.15)
+                amount = clamp((front + trail * 0.30) * math.exp(-age * 0.5) * strength * fade_in)
                 tint = (1.0, 0.04, 0.22) if warming else (0.015, 0.85, 1.0)
                 color = mix(color, tint, amount)
             result.append(color)

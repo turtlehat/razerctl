@@ -11,20 +11,20 @@ razerctl set --charge-limit 80
 razerctl set --effect static orange
 ```
 
-## Features
+## ✨ Features
 
-- **Performance:** select performance modes, adjust CPU/GPU power levels in Custom mode, and control fans.
-- **Monitoring:** read fan speeds, temperatures, battery status and charger wattage.
-- **Charging:** set a charge limit or override it to charge to 100%.
-- **Lighting:** adjust brightness, keyboard effects and the lid logo.
-- **Animations:** play Polychromatic sequences and ChromaEffects profiles, including keyboard-triggered Reactive and Ripple layers.
-- **Saved settings:** capture your configuration and restore it after a restart, sleep or power-source change.
-- **Scripting:** JSON output, bare values for individual readings, and silent successful writes.
+- 🚀 **Performance:** select performance modes, adjust CPU/GPU power levels in Custom mode, and control fans.
+- 🌡️ **Monitoring:** read fan speeds, temperatures, battery status and charger wattage.
+- 🔋 **Charging:** set a charge limit or override it to charge to 100%.
+- 💡 **Lighting:** adjust brightness, keyboard effects and the lid logo.
+- 🎬 **Animations:** play Polychromatic sequences and ChromaEffects profiles, including keyboard-triggered Reactive and Ripple layers.
+- 💾 **Saved settings:** capture your configuration and restore it after a restart, sleep or power-source change.
+- 🧩 **Scripting:** JSON output, bare values for individual readings, and silent successful writes.
 
 Available settings depend on your device. Command help shows only the settings
 declared for the selected model.
 
-## Supported hardware
+## 💻 Supported hardware
 
 Tested on:
 
@@ -46,7 +46,7 @@ its output is useful when reporting support for a model. Normal probing does
 not change settings. `probe --effects` also tests lighting effects and restores
 the original effect afterward.
 
-## Build and install
+## 🔧 Build and install
 
 Linux requires [Zig](https://ziglang.org/) 0.17 and the hidapi development files:
 
@@ -64,7 +64,11 @@ From the project directory:
 zig build -Doptimize=ReleaseSafe
 ```
 
-The binary is written to `zig-out/bin/razerctl`.
+The binary is written to `zig-out/bin/razerctl`. Install it on your `PATH`:
+
+```sh
+sudo install -Dm755 zig-out/bin/razerctl /usr/local/bin/razerctl
+```
 
 ### Device permissions
 
@@ -95,7 +99,7 @@ sudo install -Dm644 completions/_razerctl /usr/local/share/zsh/site-functions/_r
 Enable completion with `autoload -Uz compinit; compinit` in `.zshrc` if needed.
 Completion suggests commands, device IDs, settings and accepted values.
 
-## Everyday use
+## ⌨️ Everyday use
 
 Commands automatically select your Razer laptop. To select a model explicitly,
 put its ID immediately after the command:
@@ -118,10 +122,10 @@ razerctl set 0x02b6 --help
 ### Reading settings
 
 ```sh
-razerctl get                         # all readings and settings
-razerctl get --brightness            # one bare value, such as 29
-razerctl get --cpu-temp --gpu-temp    # selected readings with labels
-razerctl get --json                  # JSON for scripts
+razerctl get                        # all readings and settings
+razerctl get --brightness           # one bare value, such as 29
+razerctl get --cpu-temp --gpu-temp  # selected readings with labels
+razerctl get --json                 # JSON for scripts
 ```
 
 Multi-fan laptops expose `fan-speed-1`, `fan-speed-2`, and so on.
@@ -161,17 +165,17 @@ Colours can be names, `'#rrggbb'`, or `r,g,b`. Quote hex colours in the shell.
 Numeric colours accept an optional gamma value from 1 to 4, such as
 `'#ff00ff,2.4'`; omit it to use the device default.
 
-## Saving and restoring settings
+## 💾 Saving and restoring settings
 
 Hardware can reset settings after sleep, a restart or a power-source change.
 Saving is explicit; ordinary `set` commands do not save anything.
 
 ```sh
 razerctl set --mode balanced --charge-limit 80 --save  # apply and save
-razerctl save                                       # save current settings
-razerctl save --brightness                           # save just brightness
-razerctl restore                                    # restore saved settings
-razerctl restore --brightness                        # restore just brightness
+razerctl save                                          # save current settings
+razerctl save --brightness                             # save just brightness
+razerctl restore                                       # restore saved settings
+razerctl restore --brightness                          # restore just brightness
 ```
 
 `save` without selectors captures all readable, writable settings. Selected
@@ -183,7 +187,7 @@ Settings are stored under `$XDG_STATE_HOME/razerctl`, or
 saved them. Restoration is not automatic; you can call it from your own login,
 resume or power-management hooks.
 
-## Playing animations
+## 🌈 Playing animations
 
 ```sh
 razerctl play animation.json
@@ -251,7 +255,7 @@ Python programs create lighting that evolves as it runs:
 | Effect | Description |
 |---|---|
 | [**Solstice**](examples/stream/solstice.py) | Sunrise, drifting clouds, sunset and a starry moonlit night, following local time |
-| [**Ghost in the Machine**](examples/stream/ghost-in-the-machine.py) | Neon blue scanning currents, crimson CPU-load surges and electric cooling trails—even a single busy core wakes it up |
+| [**Ghost in the Machine**](examples/stream/ghost-in-the-machine.py) | Calm neon blue at idle, crimson surges and electric pulses as CPU load rises and falls—even a single busy core wakes it up |
 | [**Fireworks**](examples/stream/fireworks.py) | Golden trails rise to the top row, bloom into colourful spheres, then slowly fall and fade, one firework at a time |
 | [**Digital Rain**](examples/stream/digital-rain.py) | Emerald code trails with pale leading glyphs and occasional signal glitches |
 
@@ -272,6 +276,17 @@ to choose another executable, or pass a device ID such as
 `python3 examples/stream/solstice.py 0x02b6`.
 Run any program with `--help` to see its options.
 
-## License
+To write your own, pipe raw RGB frames to `razerctl stream`: 3 bytes per key,
+in row-by-column order, one frame after another. `razerctl stream --info`
+shows the layout and frame size. The original effect is restored on exit.
+
+## 🐛 Reporting a model
+
+Tried razerctl on a laptop that isn't marked as tested? Please
+[open an issue](https://github.com/turtlehat/razerctl/issues) with your model
+name and the output of `razerctl probe`, plus anything that didn't work.
+Reports that everything works are just as helpful.
+
+## 📄 License
 
 MIT.

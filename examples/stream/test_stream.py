@@ -107,14 +107,48 @@ class SceneTests(unittest.TestCase):
             self.assertGreater(sum(c[0] for c in hot), sum(c[2] for c in hot))
             self.assertTrue(any(pulse[3] for pulse in scene.pulses))
             meter.value = 0
-            for tick in range(126, 251):
+            for tick in range(126, 301):
                 scene.render(tick / 25, 1 / 25)
             self.assertLess(scene.load, 0.10)
             self.assertTrue(any(not pulse[3] for pulse in scene.pulses))
-            for tick in range(251, 701):
+            for tick in range(301, 751):
                 cool = scene.render(tick / 25, 1 / 25)
             self.assertGreater(sum(c[2] for c in cool), sum(c[0] for c in cool))
             self.assertEqual(len(scene.pulses), 0)
+
+    def test_ghost_settles_under_noisy_idle_load(self):
+        class Noise:
+            def __init__(self):
+                self.rng = __import__("random").Random(4)
+
+            def read(self):
+                return self.rng.choice((0, 0, 0.02, 0.05, 0.09, 0.24))
+
+        scene = ghost.Ghost(6, 16, Noise())
+        for tick in range(25 * 300):
+            scene.render(tick / 25, 1 / 25)
+        self.assertEqual(len(scene.pulses), 0)
+        self.assertLess(scene.load, 0.08)
+
+    def test_ghost_long_run_has_no_sudden_flashes(self):
+        class Bursty:
+            def __init__(self):
+                self.rng = __import__("random").Random(7)
+
+            def read(self):
+                return self.rng.choice((0.03, 0.1, 0.3, 0.7, 1.0))
+
+        scene = ghost.Ghost(6, 16, Bursty())
+        previous = scene.render(0, 0)
+        pulses = set()
+        for tick in range(1, 25 * 600):
+            colors = scene.render(tick / 25, 1 / 25)
+            jump = max(abs(a - b) for c, d in zip(colors, previous) for a, b in zip(c, d))
+            self.assertLess(jump, 0.5)
+            pulses.update(pulse[0] for pulse in scene.pulses)
+            previous = colors
+        self.assertGreater(len(pulses), 0)
+        self.assertLessEqual(len(pulses), 600 / 2)
 
     def test_ghost_smoothing_is_frame_rate_independent(self):
         loads = []
