@@ -32,9 +32,9 @@ def sky_at(phase, height):
 
 
 class Solstice:
-    def __init__(self, rows, columns, day_seconds=180, realtime=False, seed=73):
+    def __init__(self, rows, columns, day_seconds=None, seed=73):
         self.rows, self.columns = rows, columns
-        self.day_seconds, self.realtime = day_seconds, realtime
+        self.day_seconds = day_seconds
         rng = random.Random(seed)
         self.cells = [
             (column / max(1, columns - 1), row / max(1, rows - 1),
@@ -43,7 +43,7 @@ class Solstice:
         ]
 
     def render(self, elapsed, dt):
-        if self.realtime:
+        if self.day_seconds is None:
             now = datetime.datetime.now()
             phase = (now.hour * 3600 + now.minute * 60 + now.second
                      + now.microsecond / 1e6) / 86400
@@ -85,9 +85,7 @@ class Solstice:
 
 if __name__ == "__main__":
     cli = parser(__doc__)
-    cli.add_argument("--day-seconds", type=positive, default=180,
-                     help="Seconds per day/night cycle (default: 180).")
-    cli.add_argument("--realtime", action="store_true",
-                     help="Follow local time instead of an accelerated day.")
+    cli.add_argument("--day-seconds", type=positive,
+                     help="Use an accelerated day/night cycle instead of local time.")
     raise SystemExit(run(cli, lambda rows, columns, args:
-                         Solstice(rows, columns, args.day_seconds, args.realtime)))
+                         Solstice(rows, columns, args.day_seconds)))

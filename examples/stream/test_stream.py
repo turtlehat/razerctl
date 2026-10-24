@@ -64,7 +64,7 @@ class SceneTests(unittest.TestCase):
 
     def test_solstice_has_distinct_days_and_nights(self):
         for rows, columns in LAYOUTS:
-            scene = Solstice(rows, columns)
+            scene = Solstice(rows, columns, day_seconds=180)
             noon = scene.render((0.5 - 0.22) * 180, 0)
             night = scene.render((1 - 0.22) * 180, 0)
             self.assertGreater(sum(map(sum, noon)), sum(map(sum, night)) * 1.5)
@@ -72,14 +72,14 @@ class SceneTests(unittest.TestCase):
             self.assertGreater(len(set(noon)), 4)
 
     def test_solstice_cycle_wrap_is_smooth(self):
-        scene = Solstice(6, 16)
+        scene = Solstice(6, 16, day_seconds=180)
         wrap = (1 - 0.22) * scene.day_seconds
         before, after = scene.render(wrap - 0.001, 0), scene.render(wrap + 0.001, 0)
         self.assertLess(max(abs(a - b) for c, d in zip(before, after)
                             for a, b in zip(c, d)), 0.002)
 
     def test_clouds_and_stars_change_between_days(self):
-        scene = Solstice(6, 16)
+        scene = Solstice(6, 16, day_seconds=180)
         self.assertNotEqual(scene.render(0, 0), scene.render(180, 0))
 
     def test_solstice_realtime_uses_local_time(self):
@@ -88,7 +88,7 @@ class SceneTests(unittest.TestCase):
         midnight_time = datetime.datetime(2026, 1, 1, 0, 0)
         with patch("solstice.datetime.datetime") as clock:
             clock.now.return_value = noon_time
-            realtime = Solstice(6, 16, realtime=True)
+            realtime = Solstice(6, 16)
             noon = realtime.render(0, 0)
             clock.now.return_value = midnight_time
             night = realtime.render(0, 0)

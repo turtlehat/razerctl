@@ -243,9 +243,16 @@ distributions, add yourself to the `input` group with
 **This grants access to all keyboard events, not just Razer's.**
 Without access, other effects still play.
 
-#### Living streams
+#### Stream Effects
 
 Python programs create lighting that evolves as it runs:
+
+| Effect | Description |
+|---|---|
+| [**Solstice**](examples/stream/solstice.py) | Sunrise, drifting clouds, sunset and a starry moonlit night, following local time |
+| [**Ghost in the Machine**](examples/stream/ghost-in-the-machine.py) | Neon blue scanning currents, crimson CPU-load surges and electric cooling trails—even a single busy core wakes it up |
+| [**Fireworks**](examples/stream/fireworks.py) | Golden trails rise to the top row, bloom into colourful spheres, then slowly fall and fade, one firework at a time |
+| [**Digital Rain**](examples/stream/digital-rain.py) | Emerald code trails with pale leading glyphs and occasional signal glitches |
 
 ```sh
 python3 examples/stream/solstice.py
@@ -254,19 +261,9 @@ python3 examples/stream/fireworks.py
 python3 examples/stream/digital-rain.py
 ```
 
-**Solstice** moves from sunrise through daylight and sunset to a moonlit,
-starry night. A full day takes three minutes; use `--day-seconds 60` for a
-shorter day, or `--realtime` to follow local time.
-
-**Ghost in the Machine** mixes dark blue with neon scanning currents, crimson
-load surges and electric cooling trails. Even a single busy core wakes it up;
-heavier overall activity pushes it further toward red. It shows activity,
-not temperature.
-
-**Fireworks** sends golden trails to the top row, then blooms into colourful
-spheres whose sparks slowly fall and fade, one firework at a time.
-**Digital Rain** sends emerald code trails down the keyboard, with pale leading glyphs and occasional
-signal glitches. Single-row layouts get spreading bursts and travelling code.
+All four adapt to single-row layouts. Ghost in the Machine shows CPU activity,
+not temperature. Solstice accepts `--day-seconds 180` for an accelerated
+three-minute day instead of local time.
 
 The programs need only Python 3 and launch `./zig-out/bin/razerctl` to discover
 your laptop's layout and play the animation. Use `--razerctl /path/to/razerctl`
