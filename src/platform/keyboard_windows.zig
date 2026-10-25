@@ -3,6 +3,14 @@ const c = @import("keyboard_input_windows_c");
 
 const class_name = std.unicode.utf8ToUtf16LeStringLiteral("razerctl-keyboard");
 
+// An HRAWINPUT is an opaque number that need not satisfy the alignment of the
+// pointer type it is declared as, so @ptrFromInt would panic on it.
+fn rawInputHandle(lparam: c.LPARAM) c.HRAWINPUT {
+    const handle: extern union { number: usize, pointer: c.HRAWINPUT } = .{ .number = @bitCast(lparam) };
+
+    return handle.pointer;
+}
+
 pub const Keyboard = struct {
     window: c.HWND,
     instance: c.HINSTANCE,
@@ -75,7 +83,7 @@ pub const Keyboard = struct {
             if (message.message != c.WM_INPUT) continue;
             var raw: c.RAWINPUT = undefined;
             var size: c.UINT = @sizeOf(c.RAWINPUT);
-            const read = c.GetRawInputData(@ptrFromInt(@as(usize, @bitCast(message.lParam))), c.RID_INPUT, &raw, &size, @sizeOf(c.RAWINPUTHEADER));
+            const read = c.GetRawInputData(rawInputHandle(message.lParam), c.RID_INPUT, &raw, &size, @sizeOf(c.RAWINPUTHEADER));
             if (read == std.math.maxInt(c.UINT) or read < @sizeOf(c.RAWINPUTHEADER))
                 return error.KeyboardReadFailed;
             if (raw.header.dwType != c.RIM_TYPEKEYBOARD) continue;
@@ -180,4 +188,10 @@ test "scan codes preserve physical keys and extended distinctions" {
     try std.testing.expectEqual(@as(?u16, 119), keyCode(0x45, c.RI_KEY_E1));
     try std.testing.expectEqual(@as(?u16, 89), keyCode(0x73, 0));
     try std.testing.expectEqual(@as(?u16, null), keyCode(0x2a, c.RI_KEY_E0));
+}
+
+test "raw input handles keep odd values without an alignment check" {
+    const lparam: c.LPARAM = 0x1001;
+
+    try std.testing.expectEqual(@as(usize, 0x1001), @intFromPtr(rawInputHandle(lparam)));
 }

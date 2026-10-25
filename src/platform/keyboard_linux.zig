@@ -42,3 +42,30 @@ pub const Keyboard = struct {
         return null;
     }
 };
+
+test "evdev reader preserves quick taps and reports truncated input" {
+    var fds: [2]c_int = undefined;
+    try std.testing.expectEqual(@as(c_int, 0), c.pipe(&fds));
+    defer _ = c.close(fds[0]);
+    defer _ = c.close(fds[1]);
+    try std.testing.expect(c.fcntl(fds[0], c.F_SETFL, @as(c_int, c.O_NONBLOCK)) >= 0);
+    var event: c.struct_input_event = std.mem.zeroes(c.struct_input_event);
+    event.type = c.EV_KEY;
+    event.code = c.KEY_Q;
+    var kind: u16 = 0;
+    var code: u16 = 0;
+    var value: c_int = 0;
+    for ([_]i32{ 1, 0, 2 }) |state| {
+        event.value = state;
+        try std.testing.expectEqual(@as(isize, @sizeOf(@TypeOf(event))), c.write(fds[1], &event, @sizeOf(@TypeOf(event))));
+    }
+
+    for ([_]i32{ 1, 0, 2 }) |state| {
+        try std.testing.expectEqual(@as(c_int, 1), c.rz_keyboard_next(fds[0], &kind, &code, &value));
+        try std.testing.expectEqual(@as(u16, c.KEY_Q), code);
+        try std.testing.expectEqual(state, value);
+    }
+    try std.testing.expectEqual(@as(c_int, 0), c.rz_keyboard_next(fds[0], &kind, &code, &value));
+    _ = c.write(fds[1], &event, 1);
+    try std.testing.expectEqual(@as(c_int, -1), c.rz_keyboard_next(fds[0], &kind, &code, &value));
+}
