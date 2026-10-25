@@ -3,17 +3,17 @@ const builtin = @import("builtin");
 const chroma = @import("chroma");
 const lighting = @import("lighting_types");
 const transport = @import("transport");
-const c = if (builtin.os.tag == .linux) @import("keyboard_input_c") else struct {};
+const Backend = switch (builtin.os.tag) {
+    .linux => @import("keyboard_linux.zig").Keyboard,
+    .windows => @import("keyboard_windows.zig").Keyboard,
+    else => @compileError("keyboard input is not supported on " ++ @tagName(builtin.os.tag)),
+};
 
-/// Every key-capable event node of one Razer product; a laptop keyboard
-/// can report typing through more than one USB interface.
 pub const Keyboard = struct {
-    fds: [8]c_int = undefined,
-    len: usize = 0,
+    backend: Backend,
     entries: []const lighting.key_maps.Entry,
 
     pub fn open(pid: u16, hid: *transport.Device, config: lighting.Config, rows: u8, columns: u8) !Keyboard {
-        if (builtin.os.tag != .linux) return error.KeyboardCaptureUnsupportedPlatform;
         const map = selected: {
             try hid.acquire();
             defer hid.release();
@@ -23,46 +23,21 @@ pub const Keyboard = struct {
         };
         if (map.rows != rows or map.columns != columns)
             return error.KeyboardLayoutUnsupported;
-        var self: Keyboard = .{ .entries = map.entries };
-        const count = c.rz_keyboard_open_all(pid, &self.fds, self.fds.len);
-        if (count < 0) {
-            if (std.c._errno().* == c.EACCES or std.c._errno().* == c.EPERM)
-                return error.KeyboardPermissionDenied;
-            return error.KeyboardOpenFailed;
-        }
-        if (count == 0) return error.KeyboardNotFound;
-        self.len = @intCast(count);
-        return self;
+        return .{ .entries = map.entries, .backend = try Backend.open(pid) };
     }
 
     pub fn deinit(self: *Keyboard) void {
-        if (builtin.os.tag == .linux) for (self.fds[0..self.len]) |fd| {
-            _ = c.close(fd);
-        };
+        self.backend.deinit();
     }
 
     pub fn drain(self: *Keyboard, p: *const chroma.Profile, device: usize, tick: u64) !void {
-        if (builtin.os.tag != .linux) return error.KeyboardCaptureUnsupportedPlatform;
-        for (self.fds[0..self.len]) |fd| try self.drainOne(fd, p, device, tick);
-    }
-
-    fn drainOne(self: *Keyboard, fd: c_int, p: *const chroma.Profile, device: usize, tick: u64) !void {
-        while (true) {
-            var kind: u16 = 0;
-            var code: u16 = 0;
-            var value: c_int = 0;
-            switch (c.rz_keyboard_next(fd, &kind, &code, &value)) {
-                0 => return,
-                1 => {},
-                else => return error.KeyboardReadFailed,
-            }
-            if (kind != 1) continue;
+        while (try self.backend.next()) |event| {
             for (self.entries) |entry| {
-                if (entry.code != code) continue;
+                if (entry.code != event.code) continue;
                 try chroma.input(p.*, device, .{
                     .row = entry.row,
                     .col = entry.col,
-                    .pressed = value != 0,
+                    .pressed = event.pressed,
                 }, tick);
             }
         }
@@ -124,6 +99,7 @@ test "shared input maps preserve every measured Blade key" {
 
 test "evdev reader preserves quick taps and reports truncated input" {
     if (builtin.os.tag != .linux) return error.SkipZigTest;
+    const c = @import("keyboard_input_c");
     var fds: [2]c_int = undefined;
     try std.testing.expectEqual(@as(c_int, 0), c.pipe(&fds));
     defer _ = c.close(fds[0]);
@@ -139,6 +115,7 @@ test "evdev reader preserves quick taps and reports truncated input" {
         event.value = state;
         try std.testing.expectEqual(@as(isize, @sizeOf(@TypeOf(event))), c.write(fds[1], &event, @sizeOf(@TypeOf(event))));
     }
+
     for ([_]i32{ 1, 0, 2 }) |state| {
         try std.testing.expectEqual(@as(c_int, 1), c.rz_keyboard_next(fds[0], &kind, &code, &value));
         try std.testing.expectEqual(@as(u16, c.KEY_Q), code);
@@ -147,4 +124,8 @@ test "evdev reader preserves quick taps and reports truncated input" {
     try std.testing.expectEqual(@as(c_int, 0), c.rz_keyboard_next(fds[0], &kind, &code, &value));
     _ = c.write(fds[1], &event, 1);
     try std.testing.expectEqual(@as(c_int, -1), c.rz_keyboard_next(fds[0], &kind, &code, &value));
+}
+
+test {
+    _ = Backend;
 }

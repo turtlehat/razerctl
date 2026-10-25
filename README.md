@@ -182,8 +182,8 @@ Choose the size shown by `razerctl stream --info`.
 Per-key variants for Blade 15 models `0x023b` and `0x0246` are in
 [`examples/chroma/per-key/`](examples/chroma/per-key/).
 
-Keyboard-triggered Reactive and Ripple layers work only on Linux with
-[keyboard input access](#device-permissions).
+Keyboard-triggered Reactive and Ripple layers work on Linux and Windows.
+Linux requires [keyboard input access](#device-permissions).
 
 ### Stream Effects
 

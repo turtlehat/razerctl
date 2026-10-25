@@ -164,6 +164,7 @@ pub fn build(b: *std.Build) void {
             device_lock.addImport("device_lock_windows_c", translateC(b, translate_c, "src/c/device_lock_windows.h", target, optimize, &.{}));
             battery.addImport("battery_windows_c", translateC(b, translate_c, "src/c/battery_windows.h", target, optimize, &.{.{ .name = "setupapi" }}));
             stream_input.addImport("stream_input_windows_c", translateC(b, translate_c, "src/c/stream_input_windows.h", target, optimize, &.{}));
+            keyboard_input.addImport("keyboard_input_windows_c", translateC(b, translate_c, "src/c/keyboard_input_windows.h", target, optimize, &.{.{ .name = "user32" }}));
         },
         else => {},
     }

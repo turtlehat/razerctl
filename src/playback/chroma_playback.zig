@@ -45,7 +45,7 @@ pub fn play(context: command.Context, effect: *const chroma.Profile, output: *ui
     if (effect.needsInput(index)) {
         keyboard = Keyboard.open(device.pid, &selected.session.hid, selected.desc.features.lighting, shape.rows, shape.columns) catch |err| fallback: {
             const message = if (err == error.KeyboardPermissionDenied)
-                "warning: Reactive/Ripple inactive: keyboard access denied. On Linux, joining the input group and logging out/in may grant access; this grants access to keyboard events"
+                "warning: Reactive/Ripple inactive: keyboard access denied; install the Linux udev rules described in the README"
             else
                 "warning: Reactive/Ripple inactive: cannot read keyboard input";
             try output.writeDiagnostic(.{ .message = message, .err = err });
