@@ -1,7 +1,7 @@
 # razerctl
 
-Control your Razer laptop from the Linux command line without Synapse, a daemon,
-or a custom kernel module. Adjust performance, fans, charging and lighting,
+Control your Razer laptop from the Linux or Windows command line without Synapse,
+a daemon, or a custom kernel module. Adjust performance, fans, charging and lighting,
 play lighting animations, and save settings to restore later.
 
 ```sh
@@ -70,7 +70,25 @@ The binary is written to `zig-out/bin/razerctl`. Install it on your `PATH`:
 sudo install -Dm755 zig-out/bin/razerctl /usr/local/bin/razerctl
 ```
 
-### Device permissions
+### Windows
+
+Windows requires only [Zig](https://ziglang.org/) 0.17. hidapi is fetched and
+built as part of the project, so there is nothing else to install:
+
+```powershell
+zig build -Doptimize=ReleaseSafe
+```
+
+The binary is written to `zig-out\bin\razerctl.exe`. Copy it to a directory on
+your `PATH`. Saved settings are stored in `%LOCALAPPDATA%\razerctl`.
+
+Turn off Dynamic Lighting in Settings → Personalization → Dynamic lighting
+("Use Dynamic lighting on my devices"). Otherwise Windows overrides lighting
+effects and animations with a static colour.
+
+Reactive and Ripple effects need keyboard capture, which is Linux-only.
+
+### Device permissions (Linux)
 
 Create `/etc/udev/rules.d/70-razerctl.rules` with:
 
@@ -270,7 +288,8 @@ All four adapt to single-row layouts. Ghost in the Machine shows CPU activity,
 not temperature. Solstice accepts `--day-seconds 180` for an accelerated
 three-minute day instead of local time.
 
-The programs need only Python 3 and launch `./zig-out/bin/razerctl` to discover
+The programs need only Python 3 (use `python` instead of `python3` on Windows)
+and launch `./zig-out/bin/razerctl` to discover
 your laptop's layout and play the animation. Use `--razerctl /path/to/razerctl`
 to choose another executable, or pass a device ID such as
 `python3 examples/stream/solstice.py 0x02b6`.
