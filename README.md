@@ -18,47 +18,47 @@ Synapse, a background service or a custom kernel module.
 
 | Model | USB product ID | Verified |
 |---|---|---|
-| Razer Blade 14 (2021) | `0x0270` | — |
-| Razer Blade 14 (2022) | `0x028c` | — |
-| Razer Blade 14 (2023) | `0x029d` | — |
-| Razer Blade 14 (2024) | `0x02b6` | ✅ |
 | Razer Blade 14 (2025) | `0x02c5` | — |
-| Razer Blade 15 (2018) | `0x0233` | — |
-| Razer Blade 15 (2018) | `0x023b` | — |
-| Razer Blade 15 (2019) | `0x023a` | — |
-| Razer Blade 15 (2019) | `0x0246` | — |
-| Razer Blade 15 (2019) | `0x024b` | — |
-| Razer Blade 15 (2020) | `0x0253` | — |
-| Razer Blade 15 (2020) | `0x0255` | — |
-| Razer Blade 15 (2020) | `0x0268` | — |
+| Razer Blade 16 (2025) | `0x02c6` | — |
+| Razer Blade 18 (2025) | `0x02c7` | — |
+| Razer Blade 14 (2024) | `0x02b6` | ✅ |
+| Razer Blade 16 (2024) | `0x02b7` | — |
+| Razer Blade 18 (2024) | `0x02b8` | — |
+| Razer Blade 14 (2023) | `0x029d` | — |
+| Razer Blade 15 (2023) | `0x029e` | — |
+| Razer Blade 16 (2023) | `0x029f` | — |
+| Razer Blade 18 (2023) | `0x02a0` | — |
+| Razer Blade 14 (2022) | `0x028c` | — |
+| Razer Blade 15 (2022) | `0x027a` | — |
+| Razer Blade 15 (2022) | `0x028a` | — |
+| Razer Blade 17 (2022) | `0x028b` | — |
+| Razer Blade 14 (2021) | `0x0270` | — |
 | Razer Blade 15 (2021) | `0x026d` | — |
 | Razer Blade 15 (2021) | `0x026f` | — |
 | Razer Blade 15 (2021) | `0x0276` | — |
-| Razer Blade 15 (2022) | `0x027a` | — |
-| Razer Blade 15 (2022) | `0x028a` | — |
-| Razer Blade 15 (2023) | `0x029e` | — |
-| Razer Blade 15 Mercury White (2018) | `0x0240` | — |
-| Razer Blade 15 Mercury White (2019) | `0x0245` | — |
-| Razer Blade 15 Studio Edition (2019) | `0x024d` | — |
-| Razer Blade 16 (2023) | `0x029f` | — |
-| Razer Blade 16 (2024) | `0x02b7` | — |
-| Razer Blade 16 (2025) | `0x02c6` | — |
-| Razer Blade 16 | `0x02e0` | — |
 | Razer Blade 17 (2021) | `0x0279` | — |
-| Razer Blade 17 (2022) | `0x028b` | — |
-| Razer Blade 18 (2023) | `0x02a0` | — |
-| Razer Blade 18 (2024) | `0x02b8` | — |
-| Razer Blade 18 (2025) | `0x02c7` | — |
-| Razer Blade 18 | `0x02e1` | — |
-| Razer Blade Pro 17 (2019) | `0x0234` | — |
-| Razer Blade Pro 17 (2019) | `0x024c` | — |
-| Razer Blade Pro 17 (2020) | `0x0256` | — |
 | Razer Blade Pro 17 (2021) | `0x026e` | — |
-| Razer Blade Stealth 13 (2019) | `0x0239` | — |
-| Razer Blade Stealth 13 (2019) | `0x024a` | — |
+| Razer Blade 15 (2020) | `0x0253` | — |
+| Razer Blade 15 (2020) | `0x0255` | — |
+| Razer Blade 15 (2020) | `0x0268` | — |
+| Razer Blade Pro 17 (2020) | `0x0256` | — |
 | Razer Blade Stealth 13 (2020) | `0x0252` | — |
 | Razer Blade Stealth 13 (2020) | `0x0259` | — |
 | Razer Book 13 (2020) | `0x026a` | — |
+| Razer Blade 15 (2019) | `0x023a` | — |
+| Razer Blade 15 (2019) | `0x0246` | — |
+| Razer Blade 15 (2019) | `0x024b` | — |
+| Razer Blade 15 Mercury White (2019) | `0x0245` | — |
+| Razer Blade 15 Studio Edition (2019) | `0x024d` | — |
+| Razer Blade Pro 17 (2019) | `0x0234` | — |
+| Razer Blade Pro 17 (2019) | `0x024c` | — |
+| Razer Blade Stealth 13 (2019) | `0x0239` | — |
+| Razer Blade Stealth 13 (2019) | `0x024a` | — |
+| Razer Blade 15 (2018) | `0x0233` | — |
+| Razer Blade 15 (2018) | `0x023b` | — |
+| Razer Blade 15 Mercury White (2018) | `0x0240` | — |
+| Razer Blade 16 | `0x02e0` | — |
+| Razer Blade 18 | `0x02e1` | — |
 
 ## 🔧 Building From Source
 
