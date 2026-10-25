@@ -11,7 +11,7 @@ const battery_interface: c.GUID = .{
     .Data4 = .{ 0xbc, 0xf7, 0x00, 0xaa, 0x00, 0xb7, 0xb3, 0x2a },
 };
 
-pub fn read() !battery.Reading {
+pub fn read(_: std.Io) !battery.Reading {
     var result: battery.Reading = .{};
     var system: c.SYSTEM_POWER_STATUS = undefined;
 
@@ -61,13 +61,15 @@ pub fn read() !battery.Reading {
 
         detail.cbSize = @sizeOf(c.SP_DEVICE_INTERFACE_DETAIL_DATA_W);
 
+        // Other battery-class devices, such as wireless peripherals, may refuse access;
+        // skip them so they cannot hide the system battery.
         if (c.SetupDiGetDeviceInterfaceDetailW(devices, &interface, detail, storage.len, null, null) == 0)
-            return error.BatteryInterfaceFailed;
+            continue;
 
         const handle = c.CreateFileW(@ptrCast(&detail.DevicePath), c.GENERIC_READ, c.FILE_SHARE_READ | c.FILE_SHARE_WRITE, null, c.OPEN_EXISTING, 0, null);
 
         if (handle == c.INVALID_HANDLE_VALUE)
-            return error.BatteryOpenFailed;
+            continue;
 
         defer _ = c.CloseHandle(handle);
 
@@ -134,10 +136,7 @@ fn query(handle: c.HANDLE, code: c.DWORD, input: anytype, output: anytype) !bool
     var returned: c.DWORD = 0;
 
     if (c.DeviceIoControl(handle, code, input, @sizeOf(@TypeOf(input.*)), output, @sizeOf(@TypeOf(output.*)), &returned, null) == 0)
-        return switch (c.GetLastError()) {
-            c.ERROR_INVALID_FUNCTION, c.ERROR_NOT_SUPPORTED, c.ERROR_FILE_NOT_FOUND => false,
-            else => error.BatteryQueryFailed,
-        };
+        return false;
 
     if (returned != @sizeOf(@TypeOf(output.*)))
         return error.InvalidBatteryResponse;
@@ -162,5 +161,5 @@ comptime {
 }
 
 test "Windows battery snapshot uses standard queries" {
-    _ = try read();
+    _ = try read(std.testing.io);
 }

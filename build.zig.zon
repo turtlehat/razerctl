@@ -6,6 +6,10 @@
             .url = "git+https://codeberg.org/ziglang/translate-c?ref=zig-0.17.x#cfac21f3199b2b02ce3fd7db652aa456421fe4ab",
             .hash = "translate_c-2.0.2-Q_BUWvBNBwDnyehSiuAJmdFcMYHYGA-Jc3KiYdrV2Dqx",
         },
+        .hidapi = .{
+            .url = "git+https://github.com/libusb/hidapi?ref=hidapi-0.15.0#d6b2a974608dec3b76fb1e36c189f22b9cf3650c",
+            .hash = "N-V-__8AALbQHQBXn9YpxHFEFwUzFDA_SD3HKHe8NkIkDSu_",
+        },
     },
     .minimum_zig_version = "0.17.0",
     .paths = .{ "build.zig", "build.zig.zon", "src", "completions", "examples", "README.md", "LICENSE" },

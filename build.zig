@@ -31,8 +31,7 @@ pub fn build(b: *std.Build) void {
     const transport = module(b, b.path("src/device/transport.zig"), target, optimize);
     const device_lock = module(b, b.path("src/platform/device_lock.zig"), target, optimize);
 
-    transport.addImport("hidapi_c", translateC(b, translate_c, "src/c/hidapi.h", target, optimize, &.{.{ .name = "hidapi-hidraw" }}));
-    device_lock.addImport("device_lock_c", translateC(b, translate_c, "src/c/device_lock.h", target, optimize, &.{}));
+    transport.addImport("hidapi_c", hidapiC(b, translate_c, target, optimize));
     transport.addImport("device_lock", device_lock);
     const ui = module(b, b.path("src/interface/ui.zig"), target, optimize);
     const probe_result = module(b, b.path("src/device/probe_result.zig"), target, optimize);
@@ -40,9 +39,6 @@ pub fn build(b: *std.Build) void {
     probe_result.addImport("ui", ui);
     probe_result.addImport("transport", transport);
     const battery = module(b, b.path("src/platform/battery.zig"), target, optimize);
-
-    if (target.result.os.tag == .windows)
-        battery.addImport("battery_windows_c", translateC(b, translate_c, "src/c/battery_windows.h", target, optimize, &.{.{ .name = "setupapi" }}));
 
     const power_mode = module(b, b.path("src/features/power_mode.zig"), target, optimize);
 
@@ -157,8 +153,20 @@ pub fn build(b: *std.Build) void {
     for (features.items) |feature|
         if (std.mem.eql(u8, feature.name, "lighting"))
             keyboard_input.addImport("lighting_types", feature.capability);
-    if (target.result.os.tag == .linux)
-        keyboard_input.addImport("keyboard_input_c", translateC(b, translate_c, "src/c/keyboard_input.h", target, optimize, &.{}));
+
+    // C imports for each OS backend. Other targets fail in the modules' @compileError.
+    switch (target.result.os.tag) {
+        .linux => {
+            device_lock.addImport("device_lock_linux_c", translateC(b, translate_c, "src/c/device_lock_linux.h", target, optimize, &.{}));
+            keyboard_input.addImport("keyboard_input_c", translateC(b, translate_c, "src/c/keyboard_input.h", target, optimize, &.{}));
+        },
+        .windows => {
+            device_lock.addImport("device_lock_windows_c", translateC(b, translate_c, "src/c/device_lock_windows.h", target, optimize, &.{}));
+            battery.addImport("battery_windows_c", translateC(b, translate_c, "src/c/battery_windows.h", target, optimize, &.{.{ .name = "setupapi" }}));
+            stream_input.addImport("stream_input_windows_c", translateC(b, translate_c, "src/c/stream_input_windows.h", target, optimize, &.{}));
+        },
+        else => {},
+    }
 
     const app = module(b, b.path("src/main.zig"), target, optimize);
 
@@ -194,7 +202,7 @@ pub fn build(b: *std.Build) void {
     collection.addImport("device", device);
     test_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = collection })).step);
 
-    for ([_]*std.Build.Module{ ui, probe_result, saved, battery, device_base_types, stream_input }) |shared|
+    for ([_]*std.Build.Module{ ui, probe_result, saved, battery, device_base_types, stream_input, device_lock }) |shared|
         test_step.dependOn(&b.addRunArtifact(b.addTest(.{ .root_module = shared })).step);
 
     for (features.items) |feature|
@@ -225,13 +233,42 @@ fn translateC(b: *std.Build, dep: *std.Build.Dependency, header: []const u8, tar
     return translator.mod;
 }
 
+/// Linux uses the system hidraw backend; Windows builds the vendored hidapi statically.
+fn hidapiC(b: *std.Build, dep: *std.Build.Dependency, target: std.Build.ResolvedTarget, optimize: std.lang.Optimize) *std.Build.Module {
+    if (target.result.os.tag != .windows)
+        return translateC(b, dep, "src/c/hidapi.h", target, optimize, &.{.{ .name = "hidapi-hidraw" }});
+
+    const source = b.dependency("hidapi", .{});
+    const lib = b.addLibrary(.{
+        .name = "hidapi",
+        .linkage = .static,
+        .root_module = b.createModule(.{ .target = target, .optimize = optimize, .link_libc = true }),
+    });
+
+    lib.root_module.addCSourceFile(.{ .file = source.path("windows/hid.c") });
+    lib.root_module.addIncludePath(source.path("hidapi"));
+    lib.root_module.linkSystemLibrary("setupapi", .{});
+    lib.root_module.linkSystemLibrary("hid", .{});
+    lib.installHeadersDirectory(source.path("hidapi"), "hidapi", .{});
+
+    const translator: Translator = .init(dep, .{
+        .c_source_file = b.path("src/c/hidapi.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    translator.linkLibrary(lib);
+    return translator.mod;
+}
+
 fn module(b: *std.Build, root: std.Build.LazyPath, target: std.Build.ResolvedTarget, optimize: std.lang.Optimize) *std.Build.Module {
     return b.createModule(.{
         .root_source_file = root,
         .target = target,
         .optimize = optimize,
         .single_threaded = true,
-        .unwind_tables = .none,
+        // Windows x64 needs unwind tables for SEH, including in Zig's bundled mingw CRT.
+        .unwind_tables = if (target.result.os.tag == .windows) null else .none,
     });
 }
 
@@ -288,17 +325,21 @@ fn scanDevices(b: *std.Build) []const []const u8 {
     var paths: std.ArrayList([]const u8) = .empty;
 
     while (walker.next(io) catch |err| std.debug.panic("cannot read {s}: {t}", .{ src, err })) |entry| {
+        // The walker uses native separators, but generated @import names need '/'.
+        const entry_path = b.allocator.dupe(u8, entry.path) catch @panic("OOM");
+        std.mem.replaceScalar(u8, entry_path, '\\', '/');
+
         // Directory dependencies only track direct entries, so add each family folder too.
-        if (entry.kind == .directory and std.mem.indexOfScalar(u8, entry.path, '/') == null)
-            b.dependOnDirectoryContents(b.path(b.pathJoin(&.{ src, entry.path })));
+        if (entry.kind == .directory and std.mem.indexOfScalar(u8, entry_path, '/') == null)
+            b.dependOnDirectoryContents(b.path(b.pathJoin(&.{ src, entry_path })));
 
         if (entry.kind != .file or !std.mem.endsWith(u8, entry.basename, ".zig"))
             continue;
 
-        if (std.mem.indexOfScalar(u8, entry.path, '/') == null)
+        if (std.mem.indexOfScalar(u8, entry_path, '/') == null)
             continue;
 
-        paths.append(b.allocator, b.pathJoin(&.{ "device", "descriptors", entry.path })) catch @panic("OOM");
+        paths.append(b.allocator, b.fmt("device/descriptors/{s}", .{entry_path})) catch @panic("OOM");
     }
 
     std.mem.sort([]const u8, paths.items, {}, lessThan);
