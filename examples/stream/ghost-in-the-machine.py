@@ -2,7 +2,9 @@
 """Neon blue at rest, crimson under load, with scanning currents and electric pulses."""
 
 import math
+import os
 import random
+import sys
 from collections import deque
 
 from _stream import clamp, mix, parser, run
@@ -10,6 +12,27 @@ from _stream import clamp, mix, parser, run
 
 IDLE_FLOOR = 0.10
 PULSE_CHANGE = 0.12
+SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION = 8
+
+
+def windows_counters():
+    import ctypes
+
+    class Performance(ctypes.Structure):
+        _fields_ = [("idle", ctypes.c_int64), ("kernel", ctypes.c_int64),
+                    ("user", ctypes.c_int64), ("dpc", ctypes.c_int64),
+                    ("interrupt", ctypes.c_int64), ("interrupt_count", ctypes.c_ulong)]
+
+    cores = (Performance * os.cpu_count())()
+    status = ctypes.WinDLL("ntdll").NtQuerySystemInformation(
+        SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION, cores, ctypes.sizeof(cores), None)
+    if status:
+        raise ValueError("cannot read CPU counters from Windows")
+    # Kernel time already includes idle time.
+    counters = {f"cpu{index}": (core.kernel + core.user, core.idle)
+                for index, core in enumerate(cores)}
+    counters["cpu"] = tuple(sum(values) for values in zip(*counters.values()))
+    return counters
 
 
 class CpuMeter:
@@ -18,6 +41,8 @@ class CpuMeter:
         self.previous = self.counters()
 
     def counters(self):
+        if sys.platform == "win32":
+            return windows_counters()
         counters = {}
         with open(self.path, encoding="ascii") as source:
             for line in source:

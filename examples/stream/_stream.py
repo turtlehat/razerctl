@@ -11,6 +11,9 @@ import sys
 import threading
 import time
 
+WINDOWS = sys.platform == "win32"
+MAX_FRAME_BYTES = 4096 if WINDOWS else select.PIPE_BUF
+
 
 def clamp(value):
     return max(0.0, min(1.0, value))
@@ -63,7 +66,7 @@ def discover(command):
     if set(fields) != {"rows", "columns", "frame-bytes"}:
         raise ValueError("missing layout from razerctl stream --info")
     rows, columns = fields["rows"], fields["columns"]
-    if rows <= 0 or columns <= 0 or rows * columns * 3 > select.PIPE_BUF:
+    if rows <= 0 or columns <= 0 or rows * columns * 3 > MAX_FRAME_BYTES:
         raise ValueError("unsupported frame dimensions")
     if fields["frame-bytes"] != rows * columns * 3:
         raise ValueError("inconsistent frame size")
@@ -71,6 +74,10 @@ def discover(command):
 
 
 def write_frame(output, frame, stopped):
+    if WINDOWS:
+        # A frame fits the pipe buffer, so this write returns without blocking.
+        os.write(output, frame)
+        return
     # Frames fit PIPE_BUF, so a cancelled nonblocking write cannot leave a partial frame.
     remaining = memoryview(frame)
     while remaining and not stopped.is_set():
@@ -94,9 +101,14 @@ def play(args, factory):
     try:
         for sig in (signal.SIGINT, signal.SIGTERM):
             previous[sig] = signal.signal(sig, lambda *_: stopped.set())
-        child = subprocess.Popen(command, stdin=subprocess.PIPE, start_new_session=True)
+        # A separate session or process group keeps Ctrl-C away from razerctl,
+        # which stops when its input closes.
+        isolate = ({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if WINDOWS
+                   else {"start_new_session": True})
+        child = subprocess.Popen(command, stdin=subprocess.PIPE, **isolate)
         output = child.stdin.fileno()
-        os.set_blocking(output, False)
+        if not WINDOWS:
+            os.set_blocking(output, False)
         start = last = time.monotonic()
         try:
             while not stopped.is_set() and child.poll() is None:
@@ -137,8 +149,8 @@ def play(args, factory):
 
 def run(cli, factory):
     args = cli.parse_args()
-    if not sys.platform.startswith("linux"):
-        cli.error("these examples require Linux")
+    if not (WINDOWS or sys.platform.startswith("linux")):
+        cli.error("these examples require Linux or Windows")
     try:
         return play(args, factory)
     except KeyboardInterrupt:
