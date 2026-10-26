@@ -1,0 +1,50 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
+        with:
+          version: 0.17.0
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libhidapi-dev
+
+      - name: Check formatting
+        run: zig fmt --check build.zig build.zig.zon src examples
+
+      - name: Run tests
+        run: zig build test
+
+      - name: Build
+        run: zig build -Doptimize=ReleaseSafe
+
+      - name: Check Linux executable
+        if: runner.os == 'Linux'
+        run: ./zig-out/bin/razerctl --help
+
+      - name: Check Windows executable
+        if: runner.os == 'Windows'
+        run: .\zig-out\bin\razerctl.exe --help
