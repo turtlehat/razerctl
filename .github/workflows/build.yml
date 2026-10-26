@@ -48,3 +48,51 @@ jobs:
       - name: Check Windows executable
         if: runner.os == 'Windows'
         run: .\zig-out\bin\razerctl.exe --help
+
+  distro-build:
+    name: ${{ matrix.distro }}
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: Arch Linux
+            image: archlinux:base
+            packages: arch
+          - distro: Fedora 44
+            image: fedora:44
+            packages: fedora
+
+    steps:
+      - name: Install Arch dependencies
+        if: matrix.packages == 'arch'
+        run: pacman -Syu --noconfirm --needed git zig hidapi pkgconf tar gzip xz unzip ca-certificates
+
+      - name: Install Fedora dependencies
+        if: matrix.packages == 'fedora'
+        run: dnf install -y git hidapi-devel pkgconf-pkg-config tar gzip xz unzip ca-certificates
+
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Install Fedora Zig
+        if: matrix.packages == 'fedora'
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
+        with:
+          version: 0.17.0
+          cache-key: fedora-44
+
+      - name: Check formatting
+        run: zig fmt --check build.zig build.zig.zon src examples
+
+      - name: Run tests
+        run: zig build test
+
+      - name: Build
+        run: zig build -Doptimize=ReleaseSafe
+
+      - name: Check executable
+        run: ./zig-out/bin/razerctl --help
