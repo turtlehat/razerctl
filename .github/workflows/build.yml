@@ -67,7 +67,7 @@ jobs:
     steps:
       - name: Install Arch dependencies
         if: matrix.packages == 'arch'
-        run: pacman -Syu --noconfirm --needed git zig hidapi pkgconf tar gzip xz unzip ca-certificates
+        run: pacman -Syu --noconfirm --needed base-devel pacman-contrib git zig hidapi pkgconf tar gzip xz unzip ca-certificates
 
       - name: Install Fedora dependencies
         if: matrix.packages == 'fedora'
@@ -89,10 +89,75 @@ jobs:
         run: zig fmt --check build.zig build.zig.zon src examples
 
       - name: Run tests
+        if: matrix.packages == 'fedora'
         run: zig build test
 
       - name: Build
+        if: matrix.packages == 'fedora'
         run: zig build -Doptimize=ReleaseSafe
 
       - name: Check executable
+        if: matrix.packages == 'fedora'
         run: ./zig-out/bin/razerctl --help
+
+      - name: Build Arch package
+        if: matrix.packages == 'arch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          useradd --create-home builder
+          install -d -o builder -g builder /home/builder/package
+          cp packaging/arch/PKGBUILD /home/builder/package/
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git archive --format=tar.gz --prefix=razerctl-0.0.1/ HEAD \
+            > /home/builder/package/razerctl-0.0.1.tar.gz
+          chown -R builder:builder /home/builder/package
+          runuser -u builder -- bash -c \
+            'cd /home/builder/package && updpkgsums && makepkg --noconfirm'
+          mkdir -p artifacts
+          cp /home/builder/package/*.pkg.tar.zst artifacts/
+
+      - name: Upload Arch package
+        if: matrix.packages == 'arch'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: razerctl-arch-x86_64
+          path: artifacts/*.pkg.tar.zst
+          if-no-files-found: error
+
+  arch-package-test:
+    name: Arch package installation
+    needs: distro-build
+    runs-on: ubuntu-24.04
+    container: archlinux:base
+    steps:
+      - name: Update Arch
+        run: pacman -Syu --noconfirm
+
+      - name: Download Arch package
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: razerctl-arch-x86_64
+          path: artifacts
+
+      - name: Verify installation and removal
+        shell: bash
+        run: |
+          set -euo pipefail
+          pacman -U --noconfirm artifacts/*.pkg.tar.zst
+          useradd --create-home tester
+          runuser -u tester -- /usr/bin/razerctl --help
+          paths=(
+            /usr/bin/razerctl
+            /usr/lib/udev/rules.d/70-razerctl.rules
+            /usr/share/zsh/site-functions/_razerctl
+            /usr/share/licenses/razerctl/LICENSE
+          )
+          for path in "${paths[@]}"; do
+            test -f "$path"
+            pacman -Qo "$path"
+          done
+          pacman -R --noconfirm razerctl
+          for path in "${paths[@]}"; do
+            test ! -e "$path"
+          done

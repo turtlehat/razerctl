@@ -1,0 +1,31 @@
+pkgname=razerctl
+pkgver=0.0.1
+pkgrel=1
+pkgdesc='Control Razer laptop performance, fans, charging and lighting'
+arch=('x86_64')
+url='https://github.com/turtlehat/razerctl'
+license=('MIT')
+options=('!debug')
+depends=('glibc' 'hidapi')
+makedepends=('zig>=0.17.0' 'zig<0.18.0' 'git' 'pkgconf')
+source=("$pkgname-$pkgver.tar.gz")
+# Filled by updpkgsums for the locally generated source snapshot.
+sha256sums=()
+
+build() {
+    cd "$srcdir/$pkgname-$pkgver"
+    zig build -Doptimize=ReleaseSafe -Dcpu=baseline
+}
+
+check() {
+    cd "$srcdir/$pkgname-$pkgver"
+    zig build test
+}
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+    install -Dm755 zig-out/bin/razerctl "$pkgdir/usr/bin/razerctl"
+    install -Dm644 udev/70-razerctl.rules "$pkgdir/usr/lib/udev/rules.d/70-razerctl.rules"
+    install -Dm644 completions/_razerctl "$pkgdir/usr/share/zsh/site-functions/_razerctl"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
